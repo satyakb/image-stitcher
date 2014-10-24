@@ -126,11 +126,11 @@ static void printUsage()
 // Default command line args
 vector<string> img_names;
 bool preview = false;
-bool try_gpu = false;
-double work_megapix = 0.6;
-double seam_megapix = 0.1;
+bool try_gpu = true;
+double work_megapix = 0.08;//0.6;
+double seam_megapix = 0.08;//0.1;
 double compose_megapix = -1;
-float conf_thresh = 1.f;
+float conf_thresh = 0.5f;//1.f;
 string features_type = "surf";
 string ba_cost_func = "ray";
 string ba_refine_mask = "xxxxx";
@@ -138,10 +138,10 @@ bool do_wave_correct = true;
 WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ;
 bool save_graph = false;
 std::string save_graph_to;
-string warp_type = "spherical";
-int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
+string warp_type = "plane";
+int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;//_BLOCKS;
 float match_conf = 0.3f;
-string seam_find_type = "gc_color";
+string seam_find_type = "gc_color";//"gc_color";
 int blend_type = Blender::MULTI_BAND;
 float blend_strength = 5;
 string result_name = "result.jpg";
@@ -487,7 +487,13 @@ int main(int argc, char* argv[])
 #endif
     vector<MatchesInfo> pairwise_matches;
     BestOf2NearestMatcher matcher(try_gpu, match_conf);
-    matcher(features, pairwise_matches);
+    Mat matchMask(features.size(),features.size(),CV_8U,Scalar(0));
+    for (int i = 0; i < num_images -1; ++i)
+    {
+        matchMask.at<char>(i,i+1) =1;
+    }
+    matcher(features, pairwise_matches,matchMask);
+    // matcher(features, pairwise_matches);
     matcher.collectGarbage();
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
@@ -814,7 +820,7 @@ int main(int argc, char* argv[])
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    imwrite(result_name, result);
+    imwrite("/home/satya/mac-shared/images/pano/detail/" + result_name, result);
 
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;
