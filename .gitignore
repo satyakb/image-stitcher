@@ -1,3 +1,4 @@
 *
 !.gitignore
 !stitcher.cpp
+!detailed.cpp

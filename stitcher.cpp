@@ -40,10 +40,8 @@ int main(int argc, char const *argv[])
 {
   vector< Mat > imgs;
   Mat pano;
-  bool try_use_gpu = false;
-  float img_scale = 0.5;
-
-  printf("%d\n", argc);
+  bool try_use_gpu = true;
+  float img_scale = 0.4;
 
   if (argc < 1)
   {
@@ -54,6 +52,7 @@ int main(int argc, char const *argv[])
   vector<string> files;
   int num;
   string dir = argv[1];
+  string numString = argv[2];
 
   getdir(dir, files);
 
@@ -66,9 +65,9 @@ int main(int argc, char const *argv[])
 
   sort(files.begin(), files.end());
 
-  int interval = 3;
-  for (int i = 0; i < num; i++) {
-    if (i % interval == 0) {
+  // int interval = 12;
+  for (int i = 0; i < ((int)files.size()); i++) {
+    if (i % num == 0) {
       string file = dir + files[i];
       cout << file << endl;
       Mat img = imread(file);
@@ -96,7 +95,7 @@ int main(int argc, char const *argv[])
 
   Stitcher stitcher = Stitcher::createDefault(try_use_gpu);
   stitcher.setWarper(new PlaneWarper());
-  stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder(1000,3,4,3,4));
+  stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder(400,3,4,3,4));
   stitcher.setRegistrationResol(0.1);
   stitcher.setSeamEstimationResol(0.1);
   stitcher.setCompositingResol(1);
@@ -120,6 +119,8 @@ int main(int argc, char const *argv[])
   }
   else {
     imshow("Stitching Result", pano);
+    string path = "/home/satya/mac-shared/images/pano/long/light/" + numString + "_pano.jpg";
+    imwrite(path, pano);
   }
 
   waitKey(0);
