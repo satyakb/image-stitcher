@@ -125,12 +125,13 @@ static void printUsage()
 
 // Default command line args
 vector<string> img_names;
+vector<string> myFiles;
 bool preview = false;
 bool try_gpu = true;
-double work_megapix = 0.08;//0.6;
-double seam_megapix = 0.08;//0.1;
+double work_megapix = 0.6;//0.6;
+double seam_megapix = 0.1;//0.1;
 double compose_megapix = -1;
-float conf_thresh = 0.5f;//1.f;
+float conf_thresh = 1.f;//1.f;
 string features_type = "surf";
 string ba_cost_func = "ray";
 string ba_refine_mask = "xxxxx";
@@ -146,6 +147,9 @@ int blend_type = Blender::MULTI_BAND;
 float blend_strength = 5;
 string result_name = "result.jpg";
 int interval = 1;
+int block_size = 1;
+Mat myFinal;
+bool first = true;
 
 int getdir (string dir, vector<string> &files)
 {
@@ -346,10 +350,14 @@ static int parseCmdArgs(int argc, char** argv)
             interval = atoi(argv[i + 1]);
             i++;
         }
+        else if (string(argv[i]) == "--block_size")
+        {
+            block_size = atoi(argv[i + 1]);
+            i++;
+        }
         else if (string(argv[i]) == "--folder")
         {
             printf("GOT HERE\n");
-            vector<string> myFiles;
             int myNum;
             string myDir = argv[i + 1];
 
@@ -360,13 +368,7 @@ static int parseCmdArgs(int argc, char** argv)
 
             for (int j = 0; j < (int)myFiles.size(); ++j)
             {
-                if (j % interval == 0)
-                {
-                    myFiles[j] = myDir + myFiles[j];
-                    img_names.push_back(myFiles[j]);
-                    cout << myFiles[j] << endl;
-                }
-                
+                myFiles[j] = myDir + myFiles[j];
             }
             i++;
         }
@@ -380,8 +382,7 @@ static int parseCmdArgs(int argc, char** argv)
     return 0;
 }
 
-
-int main(int argc, char* argv[])
+int stitch()
 {
 #if ENABLE_LOG
     int64 app_start_time = getTickCount();
@@ -389,9 +390,9 @@ int main(int argc, char* argv[])
 
     cv::setBreakOnError(true);
 
-    int retval = parseCmdArgs(argc, argv);
-    if (retval)
-        return retval;
+    // int retval = parseCmdArgs(argc, argv);
+    // if (retval)
+    //     return retval;
 
     // Check if have enough images
     int num_images = static_cast<int>(img_names.size());
@@ -429,6 +430,8 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    if (!first) ++num_images;
+
     Mat full_img, img;
     vector<ImageFeatures> features(num_images);
     vector<Mat> images(num_images);
@@ -437,7 +440,19 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < num_images; ++i)
     {
-        full_img = imread(img_names[i]);
+        printf("lalalalla\n");
+        if (!first) {
+            if (i == 0)
+            {
+                full_img = myFinal.clone();
+            } else {
+                full_img = imread(img_names[i - 1]);
+            }
+            // full_img = i == 0 ? myFinal : imread(img_names[i - 1]);
+        } else {
+            full_img = imread(img_names[i]);
+        }
+        LOGLN("img type!!!" << full_img.type());
         full_img_sizes[i] = full_img.size();
 
         if (full_img.empty())
@@ -820,8 +835,51 @@ int main(int argc, char* argv[])
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    imwrite("/home/satya/mac-shared/images/pano/detail/" + result_name, result);
-
+    // imwrite(result_name, result);
+    // myFinal = result.clone();
+    result.convertTo(myFinal, CV_8UC3);
+    LOGLN(result.type());
+    LOGLN(myFinal.type());
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
+    return 0;
+}
+
+
+int main(int argc, char* argv[])
+{
+    int retval = parseCmdArgs(argc, argv);
+    if (retval)
+        return retval;
+
+    while(!myFiles.empty())
+    {
+        printf("%d\n", (int)myFiles.size());
+        img_names.clear();
+        // img_names.push_back("myFinal.jpg");
+        int tmp = block_size * interval;
+        if (tmp > (int)myFiles.size())
+        {
+            tmp = (int)myFiles.size();
+        }
+        for (int i = 0; i < tmp; ++i)
+        {
+            if (i % interval == 0) 
+            {
+                img_names.push_back(myFiles[i]);
+                cout << myFiles[i] << endl;
+            }
+        }
+        // if (block_size*interval > (int)myFiles.size())
+        // {
+        //     myFiles.clear();
+        // } else {
+        //     myFiles.erase(myFiles.begin(), myFiles.begin() + tmp);
+        // }
+        myFiles.erase(myFiles.begin(), myFiles.begin() + tmp);
+        stitch();
+        first = false;
+        // imwrite("myFinal.jpg", myFinal);
+    }
+    imwrite(result_name, myFinal);
     return 0;
 }

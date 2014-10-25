@@ -119,7 +119,7 @@ int main(int argc, char const *argv[])
   }
   else {
     imshow("Stitching Result", pano);
-    string path = "/home/satya/mac-shared/images/pano/long/light/" + numString + "_pano.jpg";
+    string path = "result2.jpg";
     imwrite(path, pano);
   }
 
