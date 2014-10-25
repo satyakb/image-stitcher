@@ -128,8 +128,8 @@ vector<string> img_names;
 vector<string> myFiles;
 bool preview = false;
 bool try_gpu = true;
-double work_megapix = 0.6;//0.6;
-double seam_megapix = 0.1;//0.1;
+double work_megapix = 0.08;//0.6;
+double seam_megapix = 0.08;//0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;//1.f;
 string features_type = "surf";
@@ -140,7 +140,7 @@ WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ;
 bool save_graph = false;
 std::string save_graph_to;
 string warp_type = "plane";
-int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;//_BLOCKS;
+int expos_comp_type = ExposureCompensator::GAIN;//_BLOCKS;
 float match_conf = 0.3f;
 string seam_find_type = "gc_color";//"gc_color";
 int blend_type = Blender::MULTI_BAND;
@@ -148,7 +148,7 @@ float blend_strength = 5;
 string result_name = "result.jpg";
 int interval = 1;
 int block_size = 1;
-Mat myFinal;
+Mat myFinal = Mat::zeros(1, 1, CV_32F);
 bool first = true;
 
 int getdir (string dir, vector<string> &files)
@@ -430,8 +430,6 @@ int stitch()
         return -1;
     }
 
-    if (!first) ++num_images;
-
     Mat full_img, img;
     vector<ImageFeatures> features(num_images);
     vector<Mat> images(num_images);
@@ -440,19 +438,7 @@ int stitch()
 
     for (int i = 0; i < num_images; ++i)
     {
-        printf("lalalalla\n");
-        if (!first) {
-            if (i == 0)
-            {
-                full_img = myFinal.clone();
-            } else {
-                full_img = imread(img_names[i - 1]);
-            }
-            // full_img = i == 0 ? myFinal : imread(img_names[i - 1]);
-        } else {
-            full_img = imread(img_names[i]);
-        }
-        LOGLN("img type!!!" << full_img.type());
+        full_img = imread(img_names[i]);
         full_img_sizes[i] = full_img.size();
 
         if (full_img.empty())
@@ -836,10 +822,8 @@ int stitch()
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // imwrite(result_name, result);
-    // myFinal = result.clone();
-    result.convertTo(myFinal, CV_8UC3);
-    LOGLN(result.type());
-    LOGLN(myFinal.type());
+    myFinal = result;
+
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;
 }
@@ -855,7 +839,7 @@ int main(int argc, char* argv[])
     {
         printf("%d\n", (int)myFiles.size());
         img_names.clear();
-        // img_names.push_back("myFinal.jpg");
+        if (!first) img_names.push_back("myFinal.png");
         int tmp = block_size * interval;
         if (tmp > (int)myFiles.size())
         {
@@ -878,7 +862,7 @@ int main(int argc, char* argv[])
         myFiles.erase(myFiles.begin(), myFiles.begin() + tmp);
         stitch();
         first = false;
-        // imwrite("myFinal.jpg", myFinal);
+        imwrite("myFinal.png", myFinal);
     }
     imwrite(result_name, myFinal);
     return 0;
