@@ -452,7 +452,7 @@ int stitch()
         } else {
             full_img = imread(img_names[i]);
         }
-        LOGLN("img type!!!" << full_img.type());
+        LOGLN("img type!!!" << full_img.channels());
         full_img_sizes[i] = full_img.size();
 
         if (full_img.empty())
@@ -736,7 +736,18 @@ int stitch()
         LOGLN("Compositing image #" << indices[img_idx]+1);
 
         // Read image and resize it if necessary
-        full_img = imread(img_names[img_idx]);
+        if (!first) {
+        if (img_idx == 0)
+        {
+            full_img = myFinal.clone();
+        } else {
+            full_img = imread(img_names[img_idx - 1]);
+        }
+            // full_img = i == 0 ? myFinal : imread(img_names[i - 1]);
+        } else {
+            full_img = imread(img_names[img_idx]);
+        }
+        // full_img = imread(img_names[img_idx]);
         if (!is_compose_scale_set)
         {
             if (compose_megapix > 0)
@@ -785,6 +796,7 @@ int stitch()
         cameras[img_idx].K().convertTo(K, CV_32F);
 
         // Warp the current image
+        LOGLN("channels: " << img.channels() << " type: " << img.type())
         warper->warp(img, K, cameras[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
         // Warp the current image mask
